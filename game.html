@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GGJ18 | KEEER</title>
+
+<link href="./mdc.css" rel="stylesheet" type="text/css" />
+<link href="./styles.css" rel="stylesheet" type="text/css" />
+
+<script language="x/template" id="sscs_templ">
+  <li class="mdc-list-item">{{texta}}</li>
+  <li class="mdc-list-item">{{textb}}</li>
+</script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.3, maximum-scale=1.3, user-scalable=0" />
+
+</head>
+
+<body>
+
+<header class="mdc-toolbar" id="top">
+  <div class="mdc-toolbar__row">
+    <section class="mdc-toolbar__section mdc-toolbar__section--align-start">
+      <span class="mdc-toolbar__title">GGJ18 | KEEER</span>
+    </section>
+  </div>
+</header>
+
+<div class="mdc-form-field" id="chat_ff">
+        <div id="chat_tf" class="mdc-text-field" data-mdc-auto-init="MDCTextField">
+          <input class="mdc-text-field__input" required id="chat_cont">
+          <label for="pass" class="mdc-text-field__label">What do you want to say?</label>
+          <div class="mdc-text-field__bottom-line"></div>
+        </div>
+</div>
+    <button id="chat_btn" class="mdc-button--theme-dark mdc-button mdc-button--raised mdc-button--compact mdc-card__action" data-mdc-auto-init="MDCRipple">Send</button>
+<style>#not_bob{
+  display: none;
+  width: 100%;
+  }</style>
+<div id="not_bob">
+  <div class="mdc-form-field" id="bchat_ff">
+          <div id="bchat_tf" class="mdc-text-field" data-mdc-auto-init="MDCTextField">
+            <input class="mdc-text-field__input" required id="bchat_cont">
+            <label for="bchat_cont" class="mdc-text-field__label">Guess?</label>
+            <div class="mdc-text-field__bottom-line"></div>
+          </div>
+  </div>
+      <button id="bchat_btn" class="mdc-button--theme-dark mdc-button mdc-button--raised mdc-button--compact mdc-card__action" data-mdc-auto-init="MDCRipple">Guess(Be ware!)</button>
+
+</div>
+<ul id="chat" class="mdc-list">
+</ul>
+
+<div class="mdc-snackbar"
+     aria-live="assertive"
+     aria-atomic="true"
+     aria-hidden="true">
+  <div class="mdc-snackbar__text"></div>
+  <div class="mdc-snackbar__action-wrapper">
+    <button type="button" class="mdc-snackbar__action-button"></button>
+  </div>
+</div>
+
+<aside id="mdc-dialog"
+    class="mdc-dialog"
+    role="alertdialog"
+    aria-labelledby="mdc-dialog-with-list-label"
+    aria-describedby="mdc-dialog-with-list-description">
+    <div class="mdc-dialog__surface">
+      <header class="mdc-dialog__header">
+        <h2 id="pwdtip" class="mdc-dialog__header__title">
+          Set or enter your password:
+        </h2>
+      </header>
+      <section id="mdc-dialog" class="mdc-dialog__body">
+        <div class="mdc-form-field">
+        <div class="mdc-text-field" data-mdc-auto-init="MDCTextField">
+          <input class="mdc-text-field__input" type="password" required id="pass">
+          <label for="pass" class="mdc-text-field__label">Password</label>
+          <div class="mdc-text-field__bottom-line"></div>
+        </div>
+        </div>
+      </section>
+      <footer class="mdc-dialog__footer">
+        <button type="button" class="mdc-button mdc-dialog__footer__button mdc-dialog__footer__button--cancel" hidden>Decline</button>
+        <button type="button" class="mdc-button mdc-dialog__footer__button mdc-dialog__footer__button--accept">OK</button>
+      </footer>
+    </div>
+    <div class="mdc-dialog__backdrop"></div>
+</aside>
+
+<script src="./mdc.js"></script>
+<script src="./utils.js"></script>
+
+<script>
+var snackbar = new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'));
+
+var sliders=[];
+var dialog = new mdc.dialog.MDCDialog(document.querySelector('#mdc-dialog'));
+
+dialog.listen('MDCDialog:accept', function() {
+  ws.send("LOGIN "+$("pass").value+$reTry+endl);
+})
+
+dialog.listen('MDCDialog:cancel', function(e) {
+  setTimeout(function(){dialog.show();},10);
+})
+
+  dialog.show();
+
+  var chat=$("chat");
+  var chat_cont=$("chat_cont");
+  var sscs_templ=$("sscs_templ").innerHTML;
+  var chat_btn=$("chat_btn");
+
+  var bchat_cont=$("bchat_cont");
+  var bchat_btn=$("bchat_btn");
+  var notBob=$("not_bob");
+
+chat_btn.addEventListener("click",function(){
+	ws.send("CHAT "+encodeURIComponent(chat_cont.value)+endl);
+	chat_cont.value="";
+	chat_cont.focus();
+});
+
+mdc.autoInit();
+</script>
+<script language="{{js}}">
+var wsLoc=(/https/.test(location.href)?"wss://":"ws://")+"{{wsLocation}}";
+var ws = new WebSocket(wsLoc);
+var maxTries=7;
+var $reTry="";
+var closeListener=function(e){
+	if(e.code!=1000){
+		console.log("Retrying."+maxTries);
+		if(maxTries<=0){
+			alert("Something went wrong with the network! Please tell the admin if you are sure your network is good.");
+			return;
+		}
+		maxTries--;
+		ws=new WebSocket(wsLoc);
+		ws.addEventListener('close',closeListener);
+		ws.onopen=wsOpen;
+		$("pwdtip").innerHTML="Enter your password:";
+		$reTry=" retry";
+		dialog.show();
+	}
+};
+ws.addEventListener('close',closeListener);
+
+var endl="\r\n";
+ws.onopen = wsOpen = function(event) {
+  console.log("WebSocket opened.");
+  maxTries=7;
+  ws._dataPile="";
+  ws.onmessage = function(msg) {
+		ws._dataPile+=msg.data;
+		var cmds=ws._dataPile.split(endl);
+		if(cmds.length>1){
+			for(var i=0;i<cmds.length-1;i++){
+				console.log(cmds,i);
+				var args=cmds[i].split(" ");
+				switch(args[0]){
+					case "LOGOK":
+          if(args[1]=="2"){//Bob
+            //TODO
+            notBob.style.display="block";
+            bchat_btn.addEventListener("click",function(){
+              ws.send("GUESS "+encodeURIComponent(bchat_cont.value)+endl);
+              bchat_cont.value="";
+            });
+          }
+					break;
+
+					case "LOGERR":
+					$("pwdtip").innerHTML=args[2];
+					dialog.show();
+					break;
+
+					case "ERROR":
+					break;
+
+					case "CHAT":
+					var text1=decodeURIComponent(args[1]);
+					var text2=decodeURIComponent(args[2]);
+					var str=template(sscs_templ,{"texta":text1,"textb":text2});
+					chat.innerHTML=str;
+					break;
+
+					default: //unknown
+					ws.send("ERROR"+endl);
+					break;
+				}
+			}
+			ws._dataPile=cmds[cmds.length-1];
+		}
+  };
+};
+</script>
+</body>
+</html>
